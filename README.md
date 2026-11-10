@@ -1,1 +1,301 @@
-# caught
+# caught 
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caught - Game Lén Lút Bựa</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .game-container {
+            width: 500px;
+            background: #2a2a2a;
+            border: 3px solid #444;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        h1 { margin-top: 0; color: #ff4757; font-size: 28px; }
+        .status-box {
+            font-size: 18px;
+            margin: 15px 0;
+            min-height: 40px;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ffa502;
+            font-size: 20px;
+            animation: blink 0.5s infinite alternate;
+        }
+        @keyframes blink {
+            from { opacity: 1; }
+            to { opacity: 0.3; }
+        }
+        .progress-bar-container {
+            width: 100%;
+            background: #444;
+            border-radius: 6px;
+            height: 20px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: #2ed573;
+            transition: width 0.1s;
+        }
+        .challenge-box {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 2px dashed #666;
+        }
+        .twister-text {
+            font-size: 20px;
+            color: #74b9ff;
+            margin-bottom: 10px;
+        }
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: none;
+            text-align: center;
+            background: #444;
+            color: #fff;
+            outline: none;
+        }
+        .btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .btn:hover { background: #ff6b81; }
+        .hidden { display: none; }
+        .instructions {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>CAUGHT! 🕵️‍♂️</h1>
+        
+        <!-- Màn hình bắt đầu -->
+        <div id="start-screen">
+            <p>Đừng để bị bắt quả tang khi đang "làm việc riêng"!</p>
+            <p class="instructions">Luật chơi: Liên tục bấm phím <b>SPACEBAR (Khoảng trắng)</b> để tích thanh tiến trình, đồng thời gõ lại thật nhanh câu líu lưỡi xuất hiện. Khi có tiếng động/cảnh báo, phải <b>DỪNG NGAY LẬP TỨC</b>!</p>
+            <button class="btn" onclick="startGame()">BẮT ĐẦU CHƠI</button>
+        </div>
+
+        <!-- Màn hình chơi chính -->
+        <div id="play-screen" class="hidden">
+            <div id="alert-box" class="status-box">Trạng thái: An toàn... Cứ tiếp tục đi!</div>
+            
+            <div class="progress-bar-container">
+                <div id="progress" class="progress-bar"></div>
+            </div>
+            <p>Tiến trình hoàn thành: <span id="progress-text">0</span>%</p>
+
+            <div class="challenge-box">
+                <div class="twister-text" id="twister-target">Luộc hột vịt lộn</div>
+                <input type="text" id="user-input" placeholder="Gõ lại câu trên thật nhanh..." oninput="checkTwister()" autocomplete="off">
+            </div>
+
+            <div class="instructions">
+                💡 Mẹo: Nhấn liên tục <b>Space</b> để tăng tốc. Nhìn kỹ cảnh báo!
+            </div>
+        </div>
+
+        <!-- Màn hình kết thúc -->
+        <div id="gameover-screen" class="hidden">
+            <h2 id="gameover-title" style="color: #ff4757;">BỊ BẮT QUẢ TANG! 🚨</h2>
+            <p id="gameover-reason">Bạn đã bị phát hiện vì không dừng lại kịp lúc!</p>
+            <button class="btn" onclick="startGame chơi lại">CHƠI LẠI</button>
+        </div>
+    </div>
+
+    <script>
+        const twisters = [
+            "Luoc hot vit lon",
+            "Con ca ro rot",
+            "Ong but bat buc",
+            "Buoc qua cau",
+            "Mua rua lua"
+        ];
+
+        let gameActive = false;
+        let progress = 0;
+        let isDanger = false;
+        let dangerTimer;
+        let currentTwister = "";
+        let gameInterval;
+
+        const startScreen = document.getElementById("start-screen");
+        const playScreen = document.getElementById("play-screen");
+        const gameoverScreen = document.getElementById("gameover-screen");
+        const progressBar = document.getElementById("progress");
+        const progressText = document.getElementById("progress-text");
+        const alertBox = document.getElementById("alert-box");
+        const twisterTarget = document.getElementById("twister-target");
+        const userInput = document.getElementById("user-input");
+        const gameoverTitle = document.getElementById("gameover-title");
+        const gameoverReason = document.getElementById("gameover-reason");
+
+        function startGame() {
+            startScreen.classList.add("hidden");
+            gameoverScreen.classList.add("hidden");
+            playScreen.classList.remove("hidden");
+            
+            gameActive = true;
+            progress = 0;
+            isDanger = false;
+            setNewTwister();
+            userInput.value = "";
+            userInput.focus();
+
+            // Vòng lặp tăng tiến trình tự nhiên và random sự kiện nguy hiểm
+            clearInterval(gameInterval);
+            gameInterval = setInterval(() => {
+                if (!gameActive) return;
+
+                // Nếu đang trong vùng nguy hiểm mà người chơi vẫn cố bấm hoặc gõ -> Thua ngay lập tức
+                if (isDanger) {
+                    // Cho phép người chơi 0.8 giây để dừng mọi hành động
+                }
+
+                // Cập nhật giao diện thanh tiến trình giảm nhẹ theo thời gian nếu không ấn
+                if (progress > 0) progress -= 0.2;
+                updateProgressUI();
+
+                // Kiểm tra thắng
+                if (progress >= 100) {
+                    winGame();
+                }
+            }, 100);
+
+            // Lên lịch ngẫu nhiên xuất hiện tình trạng nguy hiểm (Cửa mở)
+            scheduleDanger();
+        }
+
+        function setNewTwister() {
+            currentTwister = twisters[Math.floor(Math.random() * twisters.length)];
+            twisterTarget.innerText = currentTwister;
+        }
+
+        // Lắng nghe phím bấm Spacebar để tăng tiến trình
+        window.addEventListener("keydown", (e) => {
+            if (!gameActive) return;
+
+            if (e.code === "Space") {
+                e.preventDefault(); // Chống cuộn trang
+                if (isDanger) {
+                    gameOver("Bạn đã bị phát hiện vì vẫn đang lén lút lúc có người bước vào phòng!");
+                    return;
+                }
+                progress += 3;
+                if (progress > 100) progress = 100;
+                updateProgressUI();
+            }
+        });
+
+        // Kiểm tra phần gõ câu líu lưỡi
+        function checkTwister() {
+            if (!gameActive) return;
+            if (isDanger) {
+                gameOver("Bạn bị bắt vì vẫn đang lo gõ phím khi có người vào phòng!");
+                return;
+            }
+
+            if (userInput.value.trim().toLowerCase() === currentTwister.toLowerCase()) {
+                progress += 15; // Thưởng điểm khi gõ đúng câu líu lưỡi
+                userInput.value = "";
+                setNewTwister();
+            }
+        }
+
+        function updateProgressUI() {
+            progressBar.style.width = progress + "%";
+            progressText.innerText = Math.floor(progress);
+        }
+
+        function scheduleDanger() {
+            if (!gameActive) return;
+            
+            // Thời gian ngẫu nhiên từ 3 đến 7 giây sẽ có nguy hiểm xuất hiện
+            let randomTime = Math.random() * 4000 + 3000;
+            
+            dangerTimer = setTimeout(() => {
+                if (!gameActive) return;
+                
+                isDanger = true;
+                alertBox.innerText = "🚨 CẢNH BÁO: CÓ TIẾNG BƯỚC CHÂN! DỪNG NGAY LẬP TỨC! 🚨";
+                alertBox.classList.add("warning");
+
+                // Cho người chơi 1.2 giây để nhận biết và dừng tay
+                setTimeout(() => {
+                    if (!gameActive) return;
+                    // Sau 1.2 giây nếu cửa mở hẳn mà vẫn đang thao tác hoặc không chú ý -> thua
+                    // (Thực tế trong khoảng thời gian warning này, nếu bấm phím hoặc gõ chữ sẽ bị bắt ngay lập tức ở hàm keydown/input)
+                    
+                    // Nếu qua được cảnh báo an toàn:
+                    setTimeout(() => {
+                        if (!gameActive) return;
+                        isDanger = false;
+                        alertBox.innerText = "An toàn... Tiếp tục hành động!";
+                        alertBox.classList.remove("warning");
+                        scheduleDanger(); // Lặp lại chu kỳ nguy hiểm tiếp theo
+                    }, 1500);
+
+                }, 1200);
+
+            }, randomTime);
+        }
+
+        function gameOver(reason) {
+            gameActive = false;
+            clearTimeout(dangerTimer);
+            clearInterval(gameInterval);
+            playScreen.classList.add("hidden");
+            gameoverScreen.classList.remove("hidden");
+            gameoverTitle.innerText = "BỊ BẮT QUẢ TANG! 🚨";
+            gameoverReason.innerText = reason;
+        }
+
+        function winGame() {
+            gameActive = false;
+            clearTimeout(dangerTimer);
+            clearInterval(gameInterval);
+            playScreen.classList.add("hidden");
+            gameoverScreen.classList.remove("hidden");
+            gameoverTitle.innerText = "🎉 CHIẾN THẮNG AN TOÀN! 🎉";
+            gameoverReason.innerText = "Bạn đã hoàn thành mục tiêu mà không bị ai phát hiện!";
+        }
+    </script>
+</body>
+</html>
